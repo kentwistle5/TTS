@@ -1,0 +1,91 @@
+Imports System.Data.SqlClient
+Imports System.Web.Configuration
+Partial Class CustomerDelete
+    Inherits System.Web.UI.Page
+    Protected Sub lblclient_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles lblclient.Load
+        lblclient.Text = Session("strClientName")
+    End Sub
+
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+
+        ' Make sure the connection is secure.
+
+
+        If Not IsPostBack() Then
+
+            ' Get and display the data from the table.
+            Dim objConnection As New SqlConnection(WebConfigurationManager.ConnectionStrings("TrophyTrackingSystem").ConnectionString)
+            Dim strSQL As String
+            strSQL = "SELECT * "
+            strSQL &= " FROM Customer "
+            strSQL &= "WHERE CustomerID = " & Session("intCustomerID") & "; "
+            objConnection.Open()
+            Dim objCommand As New SqlCommand(strSQL, objConnection)
+            Dim objDataReader As SqlDataReader
+            objDataReader = objCommand.ExecuteReader()
+            objDataReader.Read()
+            txtLastName.Text = objDataReader("LastName")
+            txtFirstName.Text = objDataReader("FirstName")
+            txtMiddleInitial.Text = objDataReader("MiddleInitial")
+            txtCity.Text = objDataReader("City")
+            txtState.Text = objDataReader("State")
+            txtZip.Text = objDataReader("Zip")
+            txtEmail.Text = objDataReader("Email")
+           
+
+                objDataReader.Close()
+                objConnection.Close()
+
+
+                End If
+
+    End Sub
+
+    Protected Sub btnDelete_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnDelete.Click
+        lblMessage2.Visible = False
+
+
+        ' Disable the save button.
+        btnDelete.Enabled = False
+
+        ' Delete the data from the table.
+        Dim objConnection As New SqlConnection(WebConfigurationManager.ConnectionStrings("TrophyTrackingSystem").ConnectionString)
+
+        Try
+
+            Dim strSQL As String
+            strSQL = "DELETE FROM Customer WHERE CustomerID = " & Session("intCustomerID") & "; "
+            objConnection.Open()
+            Dim objCommand As New SqlCommand(strSQL, objConnection)
+            objCommand.ExecuteNonQuery()
+
+            ' Reset the Customer's ID and name.
+            Session("intCustomerID") = 0
+            Session("strCustomer") = "*"
+
+            ' Display the message.
+            Session("strMessage") = "The information below was deleted successfully."
+            lblError.ForeColor = Drawing.Color.ForestGreen
+            lblError.Text = Session("strMessage")
+        Catch
+
+            ' Display the message.
+            Session("strMessage") = "The information below was not deleted because there are Mounts and/or Animals associated with this customer."
+            lblError.ForeColor = Drawing.Color.Red
+            lblError.Text = Session("strMessage")
+
+        Finally
+
+            ' Close the connection.
+            objConnection.Close()
+
+        End Try
+        lbldelete.Visible = False
+    End Sub
+
+
+    Protected Sub btnBack_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnBack.Click
+        Response.Redirect("CustomerSelect.aspx")
+    End Sub
+
+End Class
