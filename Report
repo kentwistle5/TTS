@@ -1,0 +1,174 @@
+
+' Import the namespaces necessary for this page.
+
+Imports System.Data
+Imports System.Data.SqlClient
+Imports System.Web.Configuration
+
+
+Partial Class ReportDueDate
+
+    Inherits System.Web.UI.Page
+
+    Public strSelectCommand As String = ""
+
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        DueDateGridView.Visible = True
+        imgDateFrom.Visible = False
+        imgDateTo.Visible = False
+        If Not IsPostBack() Then
+            ' Populate the grid view.
+            PopulateGridView()
+            rdbDoNotUseDates.Checked = True
+            txtDateFrom.Enabled = False
+            txtDateTo.Enabled = False
+        ElseIf IsPostBack() Then
+            '    ' Populate the grid view.
+
+            '    PopulateGridView()
+        End If
+
+            ' Set the page focus.
+
+            txtDateFrom.Focus()
+        Session("intMountID") = Nothing
+        Session("strCustomer") = Nothing
+
+      
+    End Sub
+   
+
+    Protected Sub DueDateGridView_RowCommand(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewCommandEventArgs) Handles DueDateGridView.RowCommand
+        DueDateGridView.BackColor = Drawing.Color.White
+
+        Select Case e.CommandName
+
+            Case Session("intClientID") = DueDateGridView.DataKeys(Convert.ToInt32(e.CommandArgument)).Value
+                ' Get the data from the table.
+                Dim objConnection As New SqlConnection(WebConfigurationManager.ConnectionStrings("TrophyTrackingSystem").ConnectionString)
+                Dim strSQL As String
+                strSQL = "SELECT LastName + ' ' + FirstName + ' ' + MiddleInitial + ' ' AS ClientName "
+                strSQL &= " FROM Client "
+                strSQL &= "WHERE ClientID = " & Session("intClientID") & "; "
+                objConnection.Open()
+                Dim objCommand As New SqlCommand(strSQL, objConnection)
+                Dim objDataReader As SqlDataReader
+                objDataReader = objCommand.ExecuteReader()
+                objDataReader.Read()
+                Session("strClientName") = objDataReader("ClientName")
+                objDataReader.Close()
+                objConnection.Close()
+
+        End Select
+
+    End Sub
+
+    Protected Sub PopulateGridView()
+
+        If rdbUseDates.Checked Then
+            strSelectCommand = "SELECT Customer.LastName, Customer.FirstName, Customer.MiddleInitial, Mount.MountID, DatePromised, DateReceived, Notes, Status, Client.ClientID, Customer.ClientID "
+            strSelectCommand &= "FROM Customer, Mount, Client "
+            strSelectCommand &= "WHERE Customer.CustomerID = Mount.CustomerID AND Client.ClientID = Customer.ClientID AND  Mount.DatePromised >'" & txtDateFrom.Text & "' AND Mount.DatePromised <'" & txtDateTo.Text & "' AND Client.ClientID = " & Session("intClientID")
+            strSelectCommand &= "ORDER BY DatePromised "
+        Else
+            strSelectCommand = "SELECT Customer.LastName, Customer.FirstName, Customer.MiddleInitial, Mount.MountID, DatePromised, DateReceived, Notes, Status, Client.ClientID, Customer.ClientID "
+            strSelectCommand &= "FROM Customer, Mount, Client "
+            strSelectCommand &= "WHERE Customer.CustomerID = Mount.CustomerID AND Client.ClientID = Customer.ClientID AND  Status <> 'Completed' AND Client.ClientID = " & Session("intClientID")
+            strSelectCommand &= "ORDER BY DatePromised "
+        End If
+
+        DataBind()
+
+    End Sub
+
+    Protected Sub BtnSearch_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnSearch.Click
+        DueDateGridView.Visible = True
+        ' Populate the Gridview.
+
+        PopulateGridView()
+
+    End Sub
+
+    Protected Sub calDateFrom_SelectionChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles calDateFrom.SelectionChanged
+
+        txtDateFrom.Text = calDateFrom.SelectedDate
+        calDateFrom.Visible = False
+    End Sub
+
+    Protected Sub calDateTo_SelectionChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles calDateTo.SelectionChanged
+        txtDateTo.Text = calDateTo.SelectedDate
+        calDateTo.Visible = False
+    End Sub
+
+    Protected Sub imgDateFrom_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs) Handles imgDateFrom.Click
+        If calDateFrom.Visible = True Then
+            calDateFrom.Visible = False
+        Else
+            calDateFrom.Visible = True
+        End If
+    End Sub
+
+    Protected Sub imgDateTo_Click(ByVal sender As Object, ByVal e As System.Web.UI.ImageClickEventArgs) Handles imgDateTo.Click
+
+        If calDateTo.Visible = True Then
+            calDateTo.Visible = False
+        Else
+            calDateTo.Visible = True
+        End If
+    End Sub
+
+    Protected Sub rdbDoNotUseDates_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles rdbDoNotUseDates.CheckedChanged
+        Select Case True
+
+            Case rdbDoNotUseDates.Checked = True
+                rdbUseDates.Checked = False
+                txtDateFrom.Enabled = False
+                txtDateTo.Enabled = False
+
+            Case Else
+                rdbUseDates.Checked = True
+                rdbDoNotUseDates.Checked = False
+
+        End Select
+
+    End Sub
+
+    Protected Sub rdbUseDates_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles rdbUseDates.CheckedChanged
+        Select Case True
+
+            Case rdbUseDates.Checked = True
+                rdbDoNotUseDates.Checked = False
+                txtDateFrom.Enabled = True
+                txtDateTo.Enabled = True
+                imgDateFrom.Visible = True
+                imgDateTo.Visible = True
+            Case Else
+                rdbDoNotUseDates.Checked = True
+                rdbUseDates.Checked = False
+
+        End Select
+
+    End Sub
+
+    Protected Sub DueDateGridView_RowDataBound(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewRowEventArgs) Handles DueDateGridView.RowDataBound
+        
+        'highlight all the dates past datepromised
+
+
+        If (e.Row.RowType = DataControlRowType.DataRow) Then
+            Dim statusDate As DateTime = DataBinder.Eval(e.Row.DataItem, "DatePromised")
+            If (statusDate < DateTime.Now.AddDays(-1)) Then
+                e.Row.BackColor = Drawing.Color.Yellow
+            End If
+        End If
+
+        ' MountID = " & Session("intMountID")
+
+    End Sub
+
+    Protected Sub DueDateGridView_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles DueDateGridView.SelectedIndexChanged
+        'Dim x As Integer = e.row.cells(4)
+
+    End Sub
+
+ End Class
